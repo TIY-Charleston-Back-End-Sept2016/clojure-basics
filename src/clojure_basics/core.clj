@@ -43,11 +43,19 @@
              [:td (get person "ip_address")]])
        people)]))
 
+(defn header []
+  [:div
+   [:a {:href "/Russia"} "Russia"]
+   (repeat 5 "&nbsp;")
+   [:a {:href "/Brazil"} "Brazil"]
+   (repeat 5 "&nbsp;")
+   [:a {:href "/Germany"} "Germany"]])
+
 (c/defroutes app
   (c/GET "/" []
-    (h/html [:html [:body (people-html nil)]]))
+    (h/html [:html [:body (header) (people-html nil)]]))
   (c/GET "/:country" [country]
-    (h/html [:html [:body (people-html country)]])))
+    (h/html [:html [:body (header) (people-html country)]])))
 
 (defn -main [& args]
   (j/run-jetty app {:port 3000}))
