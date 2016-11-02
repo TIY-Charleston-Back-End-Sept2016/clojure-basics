@@ -2,6 +2,8 @@
   (:require [clojure.string :as str]
             [compojure.core :as c]
             [ring.adapter.jetty :as j]
+            [ring.middleware.params :as p]
+            [ring.util.response :as r]
             [hiccup.core :as h])
   (:gen-class))
 
@@ -43,20 +45,41 @@
              [:td (get person "ip_address")]])
        people)]))
 
+(def messages (atom []))
+
 (defn header []
   [:div
    [:a {:href "/Russia"} "Russia"]
    (repeat 5 "&nbsp;")
    [:a {:href "/Brazil"} "Brazil"]
    (repeat 5 "&nbsp;")
-   [:a {:href "/Germany"} "Germany"]])
+   [:a {:href "/Germany"} "Germany"]
+   [:br]
+   [:form {:action "/add-message" :method "post"}
+    [:input {:type "text" :placeholder "Enter message" :name "text"}]
+    [:button {:type "submit"} "Submit"]]
+   [:ol
+    (map (fn [message]
+           [:li message])
+      @messages)]])
 
 (c/defroutes app
   (c/GET "/" []
     (h/html [:html [:body (header) (people-html nil)]]))
   (c/GET "/:country" [country]
-    (h/html [:html [:body (header) (people-html country)]])))
+    (h/html [:html [:body (header) (people-html country)]]))
+  (c/POST "/add-message" request
+    (let [params (get request :params)
+          text (get params "text")]
+      (swap! messages conj text)
+      (spit "messages.edn" (pr-str @messages))
+      (r/redirect "/"))))
 
 (defn -main [& args]
-  (j/run-jetty app {:port 3000}))
+  (try
+    (let [contents-str (slurp "messages.edn")
+          contents-data (read-string contents-str)]
+      (reset! messages contents-data))
+    (catch Exception e))
+  (j/run-jetty (p/wrap-params app) {:port 3000}))
 
